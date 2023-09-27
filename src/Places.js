@@ -28,7 +28,7 @@ const Places = ({ places, vacations, addPlace })=> {
         </ul>
         <form onSubmit={ save } className='hori'>
           <input value={ name } onChange={ ev => setName(ev.target.value)}/>
-          <button>+</button>
+          <button disabled={name === ""}>+</button>
         </form>
       </div>
     );
