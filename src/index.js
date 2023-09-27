@@ -1,109 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import axios from 'axios';
-
-const VacationForm = ({ places, users, bookVacation })=> {
-  const [placeId, setPlaceId] = useState('');
-  const [userId, setUserId] = useState('');
-
-  const save = (ev)=> {
-    ev.preventDefault();
-    const vacation = {
-      user_id: userId,
-      place_id: placeId
-    };
-    bookVacation(vacation);
-  }
-  return (
-    <form onSubmit={ save }>
-      <select value={ userId } onChange={ ev => setUserId(ev.target.value)}>
-        <option value=''>-- choose a user --</option>
-        {
-          users.map( user => {
-            return (
-              <option key={ user.id } value={ user.id }>{ user.name }</option>
-            );
-          })
-        }
-      </select>
-      <select value={ placeId } onChange={ ev => setPlaceId(ev.target.value)}>
-        <option value=''>-- choose a place --</option>
-        {
-          places.map( place => {
-            return (
-              <option key={ place.id } value={ place.id }>{ place.name }</option>
-            );
-          })
-        }
-      </select>
-      <button disabled={ !placeId || !userId }>Book Vacation</button>
-    </form>
-  );
-}
-
-const Users = ({ users, vacations })=> {
-  return (
-    <div>
-      <h2>Users ({ users.length })</h2>
-      <ul>
-        {
-          users.map( user => {
-            return (
-              <li key={ user.id }>
-                { user.name }
-                ({ vacations.filter(vacation => vacation.user_id === user.id).length })
-              </li>
-            );
-          })
-        }
-      </ul>
-    </div>
-  );
-};
-
-const Vacations = ({ vacations, places, cancelVacation })=> {
-  return (
-    <div>
-      <h2>Vacations ({ vacations.length })</h2>
-      <ul>
-        {
-          vacations.map( vacation => {
-            const place = places.find(place => place.id === vacation.place_id);
-            return (
-              <li key={ vacation.id }>
-                { new Date(vacation.created_at).toLocaleString() }
-                <div> 
-                  to { place ? place.name : '' }
-                </div>
-                <button onClick={()=> cancelVacation(vacation)}>Cancel</button>
-              </li>
-            );
-          })
-        }
-      </ul>
-    </div>
-  );
-};
-
-const Places = ({ places, vacations })=> {
-  return (
-    <div>
-      <h2>Places ({ places.length })</h2>
-      <ul>
-        {
-          places.map( place => {
-            return (
-              <li key={ place.id }>
-                { place.name }
-                ({ vacations.filter(vacation => vacation.place_id === place.id).length })
-              </li>
-            );
-          })
-        }
-      </ul>
-    </div>
-  );
-};
+import Users from './Users';
+import Places from './Places';
+import VacationForm from './VacationForm';
+import Vacations from './Vacations';
 
 const App = ()=> {
   const [users, setUsers] = useState([]);
@@ -134,11 +35,73 @@ const App = ()=> {
     fetchData();
   }, []);
 
+  const findPopular = ()=>{
+    // const pop = places.reduce((acc,cur)=> {
+    // //   if(isNaN(acc.price*1)) return cur;
+    // //   if(isNaN(cur.price*1)) return acc;{ vacations.filter(vacation => vacation.place_id === place.id).length }
+      
+    //    if(vacations.filter(vacation => vacation.place_id === cur.id).length*1>vacations.filter(vacation => vacation.place_id === acc.id).length*1){
+    //      return cur;
+    //    }
+    //    return acc;
+    // },places[0]);
+    const placenum = {};
+    vacations.forEach((v)=>{
+      if(placenum[v.place_id] === undefined){placenum[v.place_id] = 0;}
+      placenum[v.place_id]++;
+    });
+    let max = -1;
+    let maxIDs = [];
+    for (const k in placenum) {
+      if(max < placenum[k]){
+        max = placenum[k];
+        maxIDs = [];
+        maxIDs.push(k);
+      }
+      else if(max === placenum[k]){
+        maxIDs.push(k);
+      }
+    }
+    
+    //console.log(popular);
+    const popular = places.filter((p) => {
+      return maxIDs.find((i) => p.id*1 === i*1);
+    });
+    let returnstring = '';
+    popular.forEach((element) => returnstring = returnstring + ", " + element.name);
+    return popular ? returnstring.substring(2) : '';
+    /*
+    let max = -1;
+    let maxID;
+    for (const k in placenum) {
+      if(max < placenum[k]){
+        max = placenum[k];
+        maxID = k;
+      }
+    }
+    //if(places){
+    //console.log(places);
+    const popular = places.find((p) => p.id*1 === maxID*1);
+    //console.log(popular);
+    //}
+    return popular ? popular.name : '';
+    */ 
+  }
+
   const bookVacation = async(vacation)=> {
     const response = await axios.post('/api/vacations', vacation);
     setVacations([...vacations, response.data]);
   }
 
+  const addUser = async(user)=> {
+    const response = await axios.post('/api/users', user);
+    setUsers([...users, response.data]);
+  }
+  
+  const addPlace = async(place)=> {
+    const response = await axios.post('/api/places', place);
+    setPlaces([...places, response.data]);
+  }
   const cancelVacation = async(vacation)=> {
     await axios.delete(`/api/vacations/${vacation.id}`);
     setVacations(vacations.filter(_vacation => _vacation.id !== vacation.id));
@@ -147,15 +110,17 @@ const App = ()=> {
   return (
     <div>
       <h1>Vacation Planner</h1>
+      <p>Hottest Destination{'(s)'}: {findPopular()}</p>
       <VacationForm places={ places } users={ users } bookVacation={ bookVacation }/>
       <main>
         <Vacations
           vacations={ vacations }
           places={ places }
+          users={users}
           cancelVacation={ cancelVacation }
         />
-        <Users users={ users } vacations={ vacations }/>
-        <Places places={ places } vacations={ vacations }/>
+        <Users users={ users } vacations={ vacations } addUser={ addUser }/>
+        <Places places={ places } vacations={ vacations } addPlace={ addPlace }/>
       </main>
     </div>
   );

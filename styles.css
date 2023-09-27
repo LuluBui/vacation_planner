@@ -21,3 +21,7 @@ form {
 form > * {
   margin: 1rem;
 }
+.hori{
+  flex-direction: row;
+  border: none;
+}

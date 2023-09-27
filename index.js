@@ -1,5 +1,5 @@
 const pg = require('pg');
-const client = new pg.Client('postgres://localhost/the_vacation_planner_db');
+const client = new pg.Client('postgres://lulubui:1andon2o3a4uffy@localhost/the_vacation_planner_db');
 const express = require('express');
 const app = express();
 app.use(express.json());
@@ -31,6 +31,19 @@ app.get('/api/users', async(req, res, next)=> {
   }
 });
 
+app.post('/api/users', async(req, res, next)=> {
+  try{
+    const SQL = `
+      INSERT INTO users(name) VALUES($1) RETURNING *
+    `;
+    const response = await client.query(SQL, [ req.body.name]);
+    res.send(response.rows[0]);
+  }
+  catch(ex){
+    next(ex);
+  }
+});
+
 app.get('/api/places', async(req, res, next)=> {
   try{
     const SQL = `
@@ -45,6 +58,18 @@ app.get('/api/places', async(req, res, next)=> {
   }
 });
 
+app.post('/api/places', async(req, res, next)=> {
+  try{
+    const SQL = `
+      INSERT INTO places(name) VALUES($1) RETURNING *
+    `;
+    const response = await client.query(SQL, [ req.body.name]);
+    res.send(response.rows[0]);
+  }
+  catch(ex){
+    next(ex);
+  }
+});
 app.get('/api/vacations', async(req, res, next)=> {
   try{
     const SQL = `
@@ -62,9 +87,9 @@ app.get('/api/vacations', async(req, res, next)=> {
 app.post('/api/vacations', async(req, res, next)=> {
   try{
     const SQL = `
-      INSERT INTO vacations(user_id, place_id) VALUES($1, $2) RETURNING *
+      INSERT INTO vacations(user_id, place_id, note) VALUES($1, $2, $3) RETURNING *
     `;
-    const response = await client.query(SQL, [ req.body.user_id, req.body.place_id ]);
+    const response = await client.query(SQL, [ req.body.user_id, req.body.place_id, req.body.note ]);
     res.send(response.rows[0]);
   }
   catch(ex){
@@ -104,7 +129,8 @@ const init = async()=> {
       id SERIAL PRIMARY KEY,
       place_id INTEGER REFERENCES places(id) NOT NULL,
       user_id INTEGER REFERENCES users(id) NOT NULL,
-      created_at TIMESTAMP DEFAULT now()
+      created_at TIMESTAMP DEFAULT now(),
+      note VARCHAR(255) NOT NULL
     );
     INSERT INTO users(name) VALUES ('moe');
     INSERT INTO users(name) VALUES ('larry');
@@ -116,9 +142,10 @@ const init = async()=> {
     INSERT INTO places(name) VALUES ('COSTA RICA');
     INSERT INTO places(name) VALUES ('DALLAS');
     INSERT INTO places(name) VALUES ('MOUNT VERNON');
-    INSERT INTO vacations(user_id, place_id) VALUES (
+    INSERT INTO vacations(user_id, place_id, note) VALUES (
       (SELECT id FROM users WHERE name='lucy'),
-      (SELECT id FROM places WHERE name='ICELAND')
+      (SELECT id FROM places WHERE name='ICELAND'),
+      ('first vacation')
     );
   `;
   await client.query(SQL);
